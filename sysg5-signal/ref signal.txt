@@ -1,0 +1,46 @@
+The Linux Programming Interface - Michael Kerrisk (Chapitre 20 - 22) 
+    http://1.droppdf.com/files/87BCs/the-linux-programming-interface.pdf
+
+Programmation système en C sous Linux - Christophe Blaess (Chapitre 6 - 8)
+    https://repo.zenk-security.com/Programmation/Programmation%20systeme%20en%20C%20sous%20Linux.pdf
+    
+https://sites.uclouvain.be/SystInfo/notes/Theorie/html/Fichiers/fichiers-signaux.html
+
+https://www.blaess.fr/christophe/2011/10/02/efficacite-des-ipc-les-signaux-temps-reel/
+
+man signalprocmask
+    https://www.gnu.org/software/libc/manual/html_node/Process-Signal-Mask.html
+    http://support.sas.com/documentation/onlinedoc/ccompiler/doc700/html/lr1/zlocking.htm
+
+man signal 
+
+man sigaction 
+
+w. richard stevens advanced programming in the unix environment
+    http://dl.booktolearn.com/ebooks2/computer/unixandlinux/9780321637734_advanced_programming_in_the_unix_environment_ad87.pdf
+chapitre 10 signal
+chapitre 7.10 longjmp
+
+
+1.
+comparaison signal normaux, signal temps réel(ce qu'il y a en plus)
+programme qui utilise les signaux temps réel avec leur file d'attente et le nombre de signaux dispos et le partage d'info
+	- file d'attente des signaux
+	- signaux supplémentaire dispo pour le programmeur
+	- possibilité de partager de l'information via les signaux temps réel.
+2. >>> fait
+programme qui montre les masques de signaux qu'on peut utiliser pour bloquer l'arrivée d'un signal et entrer en zone critique.
+3. >>> fait
+programme qui utilise les signaux pour débloquer un programme bloqué 
+4. 
+faire une bascule avec les signaux temps réel
+
+Faire un makefile >>>fait 
+https://gl.developpez.com/tutoriel/outil/makefile/
+
+qu'est ce qu'est le signal 0 ?
+Ce n'est pas vraiment un signal car kill(pid, 0) n'envoie pas de signal mais permet de savoir si 
+le process est présent sur le système. S'il ne l'est pas kill échoue avec esrch.
+
+faire une bascule avec les signaux => montrer le probleme de priorité des signaux => montrer une solution en transmettant une info en plus avec 
+le meme signal pour ne plus avoir ce probleme?

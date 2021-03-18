@@ -1,0 +1,249 @@
+\documentclass{article}
+
+\usepackage[a4paper, total={6in, 8.5in}]{geometry}
+\usepackage[francais]{babel}
+\usepackage{color}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{listingsutf8}
+
+\definecolor{greenCode}{rgb}{0, 0.6, 0}	
+
+\lstdefinestyle{code}{
+	inputencoding=utf8/latin1,
+	language=C,
+	numbers=left,
+	frame=tb,
+	tabsize=4,
+	columns=fullflexible,
+	frame=single,
+	breaklines=true,
+	showspaces=false,
+	showstringspaces=false,
+	commentstyle=\color{red},
+	keywordstyle=\color{blue},
+	stringstyle=\color{greenCode}
+}
+
+\lstdefinestyle{output}{
+	inputencoding=utf8/latin1,
+	frame=tb,
+	tabsize=4,
+	columns=fullflexible,
+	frame=single,
+	breaklines=true,
+	showspaces=false,
+	showstringspaces=false,
+}
+
+\title{Les signaux et les signaux temps-réel}
+\author{52010 Schellekens Arnaud}
+\date{16 Nomvembre 2020}
+
+\setcounter{tocdepth}{2}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\pagenumbering{arabic}
+
+\section{Introduction}
+\paragraph{} La gestion des signaux entre processus peut être très utile dans beaucoup de cas concrets. 
+Le principe est simple : un processus peut envoyer des signaux à un autre processus ou lui-même et le destinataire doit immédiatement réagir. 
+Il peut réagir de différentes façons en ignorant simplement le signal ou en exécutant le traitement associé à celui-ci.
+Nous avions déjà vu que le noyau en utilisait pour arrêter notre programme ou encore lorque l'on abordait le fork où le processus fils notifiait le père de 
+sa mort.\footnote{\label{note} Nous ne rapellerons pas tout ce qui a déjà été vu au cours.}.
+
+\subsection{Généralités}
+\paragraph{} Il existe 32 signaux différents ayant un numéro associé et un nom défini sauf le signal numéro 0 qui est un
+peu plus spécial. Ceux-ci se trouvent dans le fichier d'en-tête <signal.h>.
+Pour utiliser ces signaux, il faut toujours utiliser le nom symbolique du signal et non son numéro car le numéro d'un 
+même signal peut varier en fonction du système ou de la machine.Il existe aussi les signaux temps-réel qui ne sont pas 
+supportés sur tous les systèmes. Afin de savoir si la machine supporte les signaux temps-réel, il faut utiliser 
+la constante symbolique \_POSIX\_REALTIME\_SIGNALS qui est définie dans $<unistd.h>$. 
+Ensuite, nous ne savons pas combien de signaux sont disponibles et nous devons éviter d'utiliser leur numéro pour les utiliser. 
+Pour pouvoir y parvenir, nous avons à notre disposition deux constantes symboliques importantes : SIGRTMIN et SIGRTMAX. 
+Ils représentent respectivement le numéro du plus petit signal et du plus grand signal temps-réel. 
+Grâce à ces deux valeurs, nous pouvons accéder à tous les signaux temps-réel en utilisant les deux bornes. \linebreak
+Voici un exemple introduisant l'utilisation des signaux temps-réel :
+
+\subsubsection*{Code}
+
+\lstinputlisting[style = code]{codes/nb_signal.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/nb_signal.txt}
+
+\paragraph{} Une bonne pratique lorsque nous utilisons des signaux temps-réel est d'utiliser des macros afin de nommer le signal et d'améliorer la lisibilité du code.
+Une autre pratique est de vérifier si la machine possède suffisamment de signaux pour notre programme grâce à ses macros que nous avons définies. 
+
+\paragraph{} Nous remarquons aussi que les signaux temps-réel commencent à la valeur 34 et non 32 comme on pourrait s'y attendre. 
+Nous pouvons aussi observer que 30 signaux sont à notre disposition au lieu des 32 disponibles sur la machine. 
+Lorsque nous affichons la liste complète des signaux disponibles sur la machine, nous voyons le même problème. Où sont passés les signaux 0, 32 et 33?
+
+\lstinputlisting[style = output]{outputs/killlist.txt}
+
+\paragraph{} En lisant la documentation sur les signaux temps-réel, nous pouvons lire que l'implémentation des threads glibc POSIX utilise en interne deux ou trois de ces signaux.
+Pour éviter des conflits entre nos processus et ceux en interne, la valeur des macros SIGRTMIN est réajustée. C'est un argument supplémentaire de ne jamais utiliser les signaux 
+par leur valeur mais en utilisant la constante symbolique SIGRTMIN.
+
+\paragraph{} En ce qui concerne le signal 0, lorsque nous écrivons kill(pid, 0), la documentation nous dit qu'aucun signal n'est envoyé mais que les conditions d'erreurs sont vérifées.
+Cela signifie que le processus visé ne recevra aucun signal mais que le destinateur peut recevoir une erreur. Cela a son utilité pour vérifier si un programme existe ou non.
+
+\section{Cas concrets}
+
+\paragraph{} Une fois les bases vues, passons à la pratique avec quelques exemples de cas concrets utilisant les signaux et ses propriétés. Nous verrons que le champ des possibilités
+est vaste et qu'une solution ne sera pas toujours suffisante pour couvrir toutes les possibilités.
+
+\subsection{Un read non bloquant}
+
+\paragraph{} L'idée est simple, lire au clavier pendant une certaine durée. L'appel système read étant bloquant tant que rien n'est lu au clavier, nous aimerions que notre programme
+puisse reprendre après une certaine durée. Cela peut être utile sur un serveur par exemple. Le serveur attend une réponse du client et s'il n'a pas répondu endéans les 5 secondes, 
+une valeur par défaut sera utilisée.
+
+\paragraph{} Avant d'écrire le code, nous devons voir comment réagissent les appels systèmes lents tel que read lorsque le programme reçoit un signal. En effet, lorsqu'un signal est 
+reçu et que l'ordonnanceur donne la main à notre processus, l'appel système est intérrompu et le gestionnaire de signal est appelé. Une fois le signal traité, les appels systèmes
+lents nous disent que ceux-ci redémarrent si rien ne s'est passé. Hors, ce n'est pas ce que nous recherchons, nous ne voulons pas relire au clavier après que notre signal ait été
+envoyé et traité. Pour cela, il est possible de modifier ce comportement gràce à la fonction \textit{siginterrupt} qui nous permet de préciser si l'appel système intérrompu doit ou non reprendre.
+
+\paragraph{} Ecrivons maintenant un programme simple qui lit un caractère au clavier pendant 5 secondes. Si le caractère ENTER a été lu, un message disant "Gagné" sera envoyé.
+Si rien n'a été lu avant ces 5 secondes ou que ce n'est pas bon le bon caractère, un message disant "Perdu" sera envoyé. Ici nous utiliserons la fonction alarm(5) qui envoie 
+un signal SIGALRM à notre programme.
+
+\lstinputlisting[style = code]{codes/read_time_out.c}
+
+\paragraph{} Nous pourrions penser qu'aux premiers abords, ce programme n'ait pas de bugs. Néanmoins il existe un cas où l'ordonnanceur pourrait créer quelques problèmes.
+Imaginons le cas où notre programme arrive à la ligne 30 et exécute l'instruction alarm(5) qui a pour but de lancer la minuterie. 
+Ensuite l'ordonnanceur donne la main à un autre programme et, pour une raison ou l'autre, le système est fort chargé. Comme le système est chargé, notre programme ne reprend 
+qu'après la sixième seconde. Lorsqu'il a à nouveau la main, le signal SIGALRM a déjà été envoyé car 5 secondes s'étaient écoulées donc le traitement doit d'abord être éxécuté.
+Une fois, le traitement du signal fait, notre code peut continuer et éxécuter l'instruction suivante read(). Sauf que la minuterie étant déjà passée, notre processus sera bloqué 
+par l'appel système et il ne recevra jamais le signal SIGALRM.
+
+\paragraph{} Pour pallier à ce problème, nous devons rajouter quelques instructions supplémentaires afin d'éviter de faire un read si la minuterie est déjà passée.
+Pour cela, nous allons utiliser les fonctions sigsetjmp et siglongjmp contenue dans le fichier d'en-tête $<setjmp.h>$. 
+
+\paragraph{} Un premier appel à sigsetjmp enregistre l'environnement dans une variable et retourne 0. Ensuite, un appel à siglongjmp en donnant l'environnement donné par sigsetjmp
+nous remet à l'instruction sigsetjmp et l'éxécute à nouveau mais retourne cette fois-ci une valeur différente de 0. Cela nous permet donc de revenir en arrière 
+mais de ne pas forcément refaire les mêmes instructions car nous pouvons utiliser une condition afin d'éviter cela.
+
+\paragraph{} Modifions un peu le code pour régler le problème.
+
+\lstinputlisting[style = code]{codes/read_time_out2.c}
+
+\paragraph{} Le comportement classique reste le même, notre read sera bien intérrompu par un signal ou par un caractère lu. Néanmoins, si l'alarme se déclenche après notre read, 
+notre programme ne lancera pas le read grâce à sigsetjmp.
+
+\paragraph{} Nous avons vu que les signaux pouvaient vite complexifier de simples codes. Voyons un autre cas qui peut poser quelques problèmes lorsque nous ne faisons pas attention.
+
+\subsection{Gérer une zone critique}
+
+\paragraph{} Lorsque nous utilisons un gestionnaire de signal, nous devons faire attention aux variables que nous manipulons. En effet, le traitement d'un signal utilise le 
+même contexte que notre main(). C'est pour cela qu'il est déconseillé d'utiliser des fonctions utilisant des variables statiques ou globales dans un gestionnaire car il pourrait y avoir 
+des conflits. Par exemple, si notre processus fait appel à malloc qui utilise des variables statiques, que notre code est intérrompu lors de l'appel à malloc, et que notre traitement
+du signal fait lui aussi un malloc. Les variables statiques seront modifiées par le malloc du traitement du signal et le second malloc du code qui reprendra où il s'est arrêté 
+aura des données modifiées qui seront incohérentes. Un autre exemple que nous allons illustrer est la gestion d'une zone critique avec une variable globale.
+
+\paragraph{} Voici un simple exemple qui utilise une variable globale comme diviseur d'un nombre. La gestion du signal a pour but de modifier ce diviseur et de le mettre à 0.
+
+\subsubsection*{Code}
+
+\lstinputlisting[style = code]{codes/blocage_signal_sans_masque.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/blocage_signal_sans_masque.txt}
+
+\paragraph{} Lorsque nous lançons ce programme, nous pouvons voir que le traitement du signal modifie la valeur à 0 et provoque une division par zéro. Une façon de résoudre
+ce problème est de protéger cette zone critique du programme et de bloquer l'arrivée de signaux. Pour cela, nous allons utiliser les masques de signaux.
+
+\paragraph{} Les masques de signaux sont des masques qui contiennent un groupe de signal. Grâce à la fonction sigprocmask, nous pouvons bloquer ou débloquer l'arrivée des signaux
+définis par le masque donné en paramètres. La structure représentant le masque est opaque. Cela signifie qu'il ne faut pas remplir les différents champs de la structure soi-même 
+mais utiliser les fonctions mises à disposition. La foncction \textit{sigemptyset} permet d'initialiser le masque reçu en paramètre. Les fonctions \textit{sigaddset} et \textit{sigdelset} permet d'ajouter des signaux aux masques.
+Toute tentative d'ajouter SIGKILL ou SIGSTOP sera tout simplement ignorée silencieusement par le système. 
+Il existe d'autres fonctions associées aux masques que nous pouvons trouver à la page de manuel sigemptyset(3).
+
+\paragraph{} Récrivons notre programme en bloquant l'arrivée des signaux lors de l'entrée en zone critique.
+
+\subsubsection*{Code}
+
+\lstinputlisting[style = code]{codes/blocage_signal_avec_masque.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/blocage_signal_avec_masque.txt}
+
+\paragraph{} Nous constatons que le signal est bien envoyé pendant la zone critique mais que celui-ci est mis en attente. Le signal a été traité lorsque le signal était débloqué.
+
+\section{Limites et contraintes des signaux}
+
+\subsection{Une bascule}
+
+\paragraph{} Un dernier cas concret que nous allons réaliser est une bascule qui reçoit deux signaux différents. En fonction du signal reçu, la bascule se mettra à jour. 
+La bascule a deux états possibles : UP et DOWN. Nous pourrions être tentés d'écrire un programme qui se met à jour en utilisant les 2 signaux classiques SIGUSR1 SIGUSR2 mis à la 
+disposition du programmeur. Mais ce programme serait bien trop incomplet pour plusieurs raisons.
+Tout d'abord les signaux classiques n'ont pas de file d'attente. Si notre programme reçoit trop de signaux d'un coup, l'état de notre bascule à un moment T ne serait pas forcément 
+cohérent par rapport à la liste de signaux envoyés car les signaux accumulés seraient tout simplement perdus.
+
+\subsubsection*{Exemple de code}
+
+\lstinputlisting[style = code]{codes/blocage_signal_avec_masque.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/file_attente_signal.txt}
+
+\paragraph{} Nous pouvons observer que le premier signal est bloqué par le masque, mis dans la file d'attente et ensuite traité une fois masque levé. Les deux autres signaux envoyés
+n'ont jamais été traités et ont été perdus.
+
+\section{Les signaux temps-réel}
+
+\subsection{Caractéristiques des signaux temps-réel}
+
+\paragraph{} Pour écrire notre bascule, nous allons utiliser les signaux temps-réel qui, en plus d'ajouter des signaux supplémentaires pour le programmeur, ajoute une file d'attente
+des signaux reçus. Une autre caractéristique qui les différencie de ceux classiques des signaux temps-réel sont leur priorité. La documentation ne précise pas de priorité de traitement
+lorsque plusieurs signaux arrivent alors que les signaux temps-réel sont traités par odre croissant. Cela signifie que les signaux temps-réel de plus petite valeur seront traités 
+en priorité. Enfin, les signaux temps-réel possèdent une structure supplémentaire permettant de stocker une variable entière ou un pointeur. Cela peut être utilisé pour communiquer 
+des informations entre deux processus.
+
+\subsection{Cas concret: une bascule}
+
+\paragraph{} Les signaux temps-réel apporte donc tout ce dont nous avions besoin pour parvenir à coder cette bascule. Si nous gardons la même logique que nous avions imaginée plus tôt
+en utilisant deux signaux différents : un premier pour l'état UP et un second pour l'état DOWN. Cela donnerait un code ressemblant à ceci.
+
+\subsubsection*{Code}
+
+\lstinputlisting[style = code]{codes/bascule.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/bascule.txt}
+
+\subsubsection*{Remarques}
+
+\paragraph{} Nous bloquons l'arrivée des signaux afin de forcer notre bascule à gérer d'un coup une quantité de signaux d'un coup et d'illustrer la file d'attente. Nous pouvons
+donc observer que les signaux sont bien mis dans l'ordre d'arrivée dans la file d'attente mais un problème persiste. Ils ne sont pas traités selon l'ordre d'arrivée mais selon
+leur priorité. Cela est un problème car l'état de notre bascule ne correspond pas à l'arrivée des signaux. Pour y parvenir, nous devons donc utiliser un seul signal et pour pouvoir 
+différencier un signal UP d'un signal DOWN, nous allons utiliser la dernière propriété de ces signaux en transmettant une valeur avec le signal.
+
+\subsubsection*{Code}
+
+\lstinputlisting[style = code]{codes/bascule_viable.c}
+
+\subsubsection*{Output}
+
+\lstinputlisting[style = output]{outputs/bascule_viable.txt}
+
+\paragraph{} Nous voyons cette fois-ci que notre dernier problème est résolu et que notre bascule fonctionne correctement.
+
+\section{Conclusion}
+
+\paragraph{} Nous avons vu que les signaux classiques permettaient pas mal de possibilités mais que ceux-ci avaient leurs limites. Les signaux temps-réels les complètent mais 
+modifient légèrement leur logique d'utilisation. Il faut aussi faire attention aux bugs que ceux-ci peuvent générer et savoir s'en prémunir. 
+\end{document}

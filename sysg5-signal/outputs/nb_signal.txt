@@ -1,0 +1,4 @@
+Les signaux temps réels commencent à partir de 34 
+Les signaux temps réels finissent à 64 
+Nombre de signaux disponibles 30 
+Nombre de signaux nécessaires 14 

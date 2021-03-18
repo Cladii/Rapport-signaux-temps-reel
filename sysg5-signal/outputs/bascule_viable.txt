@@ -1,0 +1,40 @@
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Signal SIGRTUPDATE envoyé. Valeur = 1 
+Signal SIGRTUPDATE envoyé. Valeur = 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
+Bascule en état 1 
+Bascule en état 0 
